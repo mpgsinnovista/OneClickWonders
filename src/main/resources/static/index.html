@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub + Jenkins Automation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .logo {
+            margin-bottom: 15px;
+        }
+        .logo svg {
+            height: 40px;
+            width: auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin: 10px 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        #checkBtn {
+            background-color: #28a745;
+            margin-top: 5px;
+        }
+        #checkBtn:hover {
+            background-color: #218838;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            color: #007bff;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">
+            <!-- Mastercard Logo SVG -->
+            <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg">
+                <!-- Red circle -->
+                <circle cx="65" cy="60" r="30" fill="#EB001B"/>
+                <!-- Yellow circle -->
+                <circle cx="105" cy="60" r="30" fill="#FF5F00"/>
+                <!-- Orange intersection -->
+                <path d="M85,36 A30,30 0 0,1 85,84 A30,30 0 0,1 85,36 Z" fill="#FF5F00"/>
+                <!-- Mastercard text -->
+                <text x="100" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#000">
+                    mastercard
+                </text>
+            </svg>
+        </div>
+        <h1>MPGS Innovista - OneClickWonders</h1>
+        <div class="subtitle">Automated GitHub Repository & Jenkins Job Creation</div>
+    </div>
+
+    <form id="projectForm">
+        <div class="form-group">
+            <label for="repositoryName">Repository Name *</label>
+            <input type="text" id="repositoryName" name="repositoryName"
+                   placeholder="my-awesome-project" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description *</label>
+            <textarea id="description" name="description"
+                      placeholder="Describe what your project does..." required></textarea>
+        </div>
+
+        <div class="form-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="isPrivate" name="isPrivate">
+                <label for="isPrivate">Make repository private</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="jenkinsJobName">Jenkins Job Name *</label>
+            <input type="text" id="jenkinsJobName" name="jenkinsJobName"
+                   placeholder="my-project-ci-cd" required>
+        </div>
+
+        <div class="form-group">
+            <label for="buildScript">Build Script</label>
+            <textarea id="buildScript" name="buildScript"
+                      placeholder="mvn clean compile test">mvn clean compile test</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="deployScript">Deploy Script</label>
+            <textarea id="deployScript" name="deployScript"
+                      placeholder="mvn clean package">mvn clean package</textarea>
+        </div>
+
+        <button type="submit" id="submitBtn">Create Project</button>
+        <button type="button" id="checkBtn" onclick="checkAvailability()">Check Availability</button>
+    </form>
+
+    <div id="availabilityResult" class="result" style="display: none;"></div>
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    // Function to check availability
+    async function checkAvailability() {
+        const repoName = document.getElementById('repositoryName').value;
+        const jobName = document.getElementById('jenkinsJobName').value;
+
+        if (!repoName && !jobName) {
+            alert('Please enter repository name or Jenkins job name to check availability.');
+            return;
+        }
+
+        const availabilityResult = document.getElementById('availabilityResult');
+        availabilityResult.style.display = 'block';
+        availabilityResult.className = 'result loading';
+        availabilityResult.innerHTML = '⏳ Checking availability...';
+
+        try {
+            const response = await fetch('/check-availability', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    repositoryName: repoName,
+                    jenkinsJobName: jobName
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                let message = '<h3>📋 Availability Check:</h3>';
+
+                if (repoName) {
+                    if (data.repositoryExists) {
+                        message += `<p>❌ Repository '<strong>${repoName}</strong>' already exists</p>`;
+                    } else {
+                        message += `<p>✅ Repository '<strong>${repoName}</strong>' is available</p>`;
+                    }
+                }
+
+                if (jobName) {
+                    if (data.jenkinsJobExists) {
+                        message += `<p>❌ Jenkins job '<strong>${jobName}</strong>' already exists</p>`;
+                    } else {
+                        message += `<p>✅ Jenkins job '<strong>${jobName}</strong>' is available</p>`;
+                    }
+                }
+
+                const hasConflicts = data.repositoryExists || data.jenkinsJobExists;
+                availabilityResult.className = hasConflicts ? 'result error' : 'result success';
+                availabilityResult.innerHTML = message;
+            } else {
+                availabilityResult.className = 'result error';
+                availabilityResult.innerHTML = `<h3>❌ Error</h3><p>${data.error}</p>`;
+            }
+        } catch (error) {
+            availabilityResult.className = 'result error';
+            availabilityResult.innerHTML = `<h3>❌ Error</h3><p>Failed to check availability: ${error.message}</p>`;
+        }
+    }
+
+    document.getElementById('projectForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById('submitBtn');
+        const result = document.getElementById('result');
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating Project...';
+        result.style.display = 'block';
+        result.className = 'result loading';
+        result.innerHTML = '⏳ Creating GitHub repository and Jenkins job...';
+
+        // Collect form data
+        const formData = {
+            repositoryName: document.getElementById('repositoryName').value,
+            description: document.getElementById('description').value,
+            private: document.getElementById('isPrivate').checked,
+            jenkinsJobName: document.getElementById('jenkinsJobName').value,
+            buildScript: document.getElementById('buildScript').value,
+            deployScript: document.getElementById('deployScript').value
+        };
+
+        try {
+            const response = await fetch('/create-project', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                result.className = 'result success';
+                result.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <p><strong>GitHub Repository:</strong> <a href="${data.githubRepoUrl}" target="_blank">${data.githubRepoUrl}</a></p>
+                        <p><strong>Jenkins Job:</strong> <a href="${data.jenkinsJobUrl}" target="_blank">${data.jenkinsJobUrl}</a></p>
+                        <p>${data.message}</p>
+                    `;
+            } else {
+                result.className = 'result error';
+                result.innerHTML = `
+                        <h3>❌ Error</h3>
+                        <p>${data.error}</p>
+                    `;
+            }
+        } catch (error) {
+            result.className = 'result error';
+            result.innerHTML = `
+                    <h3>❌ Error</h3>
+                    <p>Failed to create project: ${error.message}</p>
+                `;
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Project';
+        }
+    });
+</script>
+</body>
+</html>

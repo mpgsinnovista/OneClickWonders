@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: OneClickWonders
+
+server:
+  port: 8181
+
+app.github:
+  token: ${GITHUB_TOKEN}
+  api-url: https://api.github.com
+app.jenkins:
+  url: http://localhost:8080
+  username: ${JENKINS_USERNAME}
+  token: ${JENKINS_TOKEN}
+
+logging:
+  level:
+    com.automation: DEBUG
